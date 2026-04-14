@@ -1,7 +1,0 @@
-model,feature_set,mean_cv_acc,std_cv_acc,test_acc,n_train,n_test,n_features,best_params
-SVM,raw,0.9255,0.0088,0.9623,1168,292,105,"{'clf__C': 10, 'clf__gamma': 'scale', 'clf__kernel': 'rbf'}"
-RandomForest,raw,0.9015,0.022,0.9144,1168,292,105,"{'clf__max_depth': 20, 'clf__min_samples_split': 2, 'clf__n_estimators': 200}"
-LogisticRegression,raw,0.8767,0.0171,0.8938,1168,292,105,"{'clf__C': 1, 'clf__penalty': 'l2', 'clf__solver': 'saga'}"
-SVM,selected,0.9307,0.0087,0.9555,1168,292,61,"{'clf__C': 10, 'clf__gamma': 'scale', 'clf__kernel': 'rbf'}"
-RandomForest,selected,0.8904,0.0236,0.8973,1168,292,61,"{'clf__max_depth': None, 'clf__min_samples_split': 2, 'clf__n_estimators': 200}"
-LogisticRegression,selected,0.8639,0.0115,0.8733,1168,292,61,"{'clf__C': 10, 'clf__penalty': 'l2', 'clf__solver': 'lbfgs'}"
