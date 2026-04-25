@@ -13,11 +13,6 @@ warnings.filterwarnings('ignore')
 
 # Configuration
 SAMPLE_RATE = 16000
-MODEL_PATHS = {
-    "RandomForest": "models/rf_model.pkl",
-    "SVM": "models/svm_model (1).pkl",
-    "LogisticRegression": "models/lr_model.pkl",
-}
 
 CLASS_NAMES = {
     0: "Tamil",
@@ -26,20 +21,6 @@ CLASS_NAMES = {
     3: "Hindi",
     4: "Malayalam",
 }
-
-# Load models
-@st.cache_resource
-def load_models():
-    models = {}
-    for name, path in MODEL_PATHS.items():
-        try:
-            models[name] = joblib.load(path)
-            st.success(f"Loaded {name}")
-        except Exception as e:
-            st.error(f"Could not load {name}: {e}")
-    return models
-
-models = load_models()
 
 # Feature extraction functions
 def extract_mfcc(y, sr, n_mfcc=13):
@@ -208,17 +189,8 @@ if uploaded_file is not None:
 
     st.write("Features extracted successfully!")
 
-    # Predictions
-    st.subheader("Predictions")
-    for model_name, pipeline in models.items():
-        try:
-            pred = pipeline.predict(X)[0]
-            prob = pipeline.predict_proba(X)[0] if hasattr(pipeline, 'predict_proba') else None
-            lang = CLASS_NAMES.get(pred, f"Class {pred}")
-            st.write(f"**{model_name}**: {lang}")
-            if prob is not None:
-                st.write(f"Probabilities: {dict(zip([CLASS_NAMES[i] for i in range(len(prob))], prob))}")
-        except Exception as e:
-            st.error(f"Error with {model_name}: {e}")
+    # Display extracted features
+    st.subheader("Extracted Features")
+    st.json(feat_dict)
 
-st.write("Note: This app uses models trained on selected features. Predictions may not be accurate if the feature set differs.")
+st.write("Note: This app extracts acoustic features from uploaded audio files.")
