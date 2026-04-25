@@ -14,9 +14,9 @@ warnings.filterwarnings('ignore')
 # Configuration
 SAMPLE_RATE = 16000
 MODEL_PATHS = {
-    "RandomForest": "rf_model.pkl",
-    "SVM": "svm_model (1).pkl",
-    "LogisticRegression": "lr_model.pkl",
+    "RandomForest": "models/rf_model.pkl",
+    "SVM": "models/svm_model (1).pkl",
+    "LogisticRegression": "models/lr_model.pkl",
 }
 
 CLASS_NAMES = {
