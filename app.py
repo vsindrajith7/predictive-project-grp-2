@@ -7,6 +7,7 @@ from parselmouth.praat import call
 import soundfile as sf
 import tempfile
 import os
+import io
 import joblib
 import warnings
 warnings.filterwarnings('ignore')
@@ -21,6 +22,18 @@ CLASS_NAMES = {
     3: "Hindi",
     4: "Malayalam",
 }
+
+MODEL_PATH = "rf_model.pkl"
+
+def load_model(path=MODEL_PATH):
+    if not os.path.exists(path):
+        return None
+    try:
+        return joblib.load(path)
+    except Exception:
+        return None
+
+model = load_model()
 
 # Feature extraction functions
 def extract_mfcc(y, sr, n_mfcc=13):
@@ -178,19 +191,42 @@ st.write("Upload a .wav audio file to predict the language using trained ML mode
 uploaded_file = st.file_uploader("Choose a .wav file", type="wav")
 
 if uploaded_file is not None:
+    audio_bytes = uploaded_file.read()
+    uploaded_file.seek(0)
+
     # Load audio
-    y, sr = librosa.load(uploaded_file, sr=SAMPLE_RATE, mono=True)
-    st.audio(uploaded_file, format='audio/wav')
+    y, sr = librosa.load(io.BytesIO(audio_bytes), sr=SAMPLE_RATE, mono=True)
+    st.audio(audio_bytes, format='audio/wav')
 
     # Extract features
     with st.spinner("Extracting features..."):
         feat_dict = extract_features(y, sr)
         X = np.array(list(feat_dict.values())).reshape(1, -1)
 
-    st.write("Features extracted successfully!")
+    st.success("Features extracted successfully!")
 
-    # Display extracted features
+    if model is not None:
+        with st.spinner("Predicting language..."):
+            try:
+                prediction = model.predict(X)[0]
+                language = CLASS_NAMES.get(int(prediction), f"Class {prediction}")
+                st.subheader("Prediction")
+                st.write(f"**Predicted language:** {language}")
+
+                if hasattr(model, "predict_proba"):
+                    probs = model.predict_proba(X)[0]
+                    prob_df = pd.DataFrame({
+                        CLASS_NAMES.get(i, str(i)): [float(probs[i])] for i in range(len(probs))
+                    })
+                    prob_df = prob_df.T.rename(columns={0: "Probability"}).sort_values("Probability", ascending=False)
+                    st.subheader("Prediction probabilities")
+                    st.table(prob_df)
+            except Exception as e:
+                st.error(f"Prediction failed: {e}")
+    else:
+        st.warning("Model file not found. The app can only show extracted features.")
+
     st.subheader("Extracted Features")
-    st.json(feat_dict)
+    st.table(pd.DataFrame([feat_dict]))
 
 st.write("Note: This app extracts acoustic features from uploaded audio files.")
