@@ -186,17 +186,21 @@ def extract_features(y, sr):
 
 # Streamlit app
 st.title("Language Classification App")
-st.write("Upload a .wav audio file to predict the language using trained ML models.")
+st.write("Upload a .wav or .mp3 audio file to predict the language using trained ML models.")
 
-uploaded_file = st.file_uploader("Choose a .wav file", type="wav")
+uploaded_file = st.file_uploader("Choose an audio file (.wav or .mp3)", type=["wav", "mp3"])
 
 if uploaded_file is not None:
     audio_bytes = uploaded_file.read()
     uploaded_file.seek(0)
 
+    # Determine audio format
+    file_extension = uploaded_file.name.split('.')[-1].lower()
+    audio_format = f'audio/{file_extension}' if file_extension in ['wav', 'mp3'] else 'audio/wav'
+
     # Load audio
     y, sr = librosa.load(io.BytesIO(audio_bytes), sr=SAMPLE_RATE, mono=True)
-    st.audio(audio_bytes, format='audio/wav')
+    st.audio(audio_bytes, format=audio_format)
 
     # Extract features
     with st.spinner("Extracting features..."):
