@@ -21,9 +21,12 @@ CLASS_NAMES = {
     2: "Kannada",
     3: "Hindi",
     4: "Malayalam",
+    5: "English",
 }
 
 MODEL_PATH = "rf_model.pkl"
+# Note: Current model supports 5 languages (0-4). 
+# To enable English (5), retrain with 6-class data using retrain_model_with_english.py
 
 def load_model(path=MODEL_PATH):
     if not os.path.exists(path):
