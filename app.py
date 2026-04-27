@@ -201,7 +201,14 @@ if uploaded_file is not None:
     # Extract features
     with st.spinner("Extracting features..."):
         feat_dict = extract_features(y, sr)
-        X = np.array(list(feat_dict.values())).reshape(1, -1)
+        feat_dict['duration'] = float(len(y) / sr)
+
+        if model is not None and hasattr(model.steps[0][1], 'feature_names_in_'):
+            feature_names = list(model.steps[0][1].feature_names_in_)
+        else:
+            feature_names = list(feat_dict.keys())
+
+        X = np.array([feat_dict.get(name, 0.0) for name in feature_names]).reshape(1, -1)
 
     st.success("Features extracted successfully!")
 
@@ -211,7 +218,7 @@ if uploaded_file is not None:
                 prediction = model.predict(X)[0]
                 language = CLASS_NAMES.get(int(prediction), f"Class {prediction}")
                 st.subheader("Prediction")
-                st.write(f"**Predicted language:** {language}")
+                st.write(f"**The audio contains the language:** {language}")
 
                 if hasattr(model, "predict_proba"):
                     probs = model.predict_proba(X)[0]
