@@ -7,7 +7,6 @@ from parselmouth.praat import call
 import soundfile as sf
 import tempfile
 import os
-import io
 import joblib
 import warnings
 warnings.filterwarnings('ignore')
@@ -21,22 +20,7 @@ CLASS_NAMES = {
     2: "Kannada",
     3: "Hindi",
     4: "Malayalam",
-    5: "English",
 }
-
-MODEL_PATH = "rf_model.pkl"
-# Note: Current model supports 5 languages (0-4). 
-# To enable English (5), retrain with 6-class data using retrain_model_with_english.py
-
-def load_model(path=MODEL_PATH):
-    if not os.path.exists(path):
-        return None
-    try:
-        return joblib.load(path)
-    except Exception:
-        return None
-
-model = load_model()
 
 # Feature extraction functions
 def extract_mfcc(y, sr, n_mfcc=13):
@@ -189,58 +173,24 @@ def extract_features(y, sr):
 
 # Streamlit app
 st.title("Language Classification App")
-st.write("Upload a .wav or .mp3 audio file to predict the language using trained ML models.")
+st.write("Upload a .wav audio file to predict the language using trained ML models.")
 
-uploaded_file = st.file_uploader("Choose an audio file (.wav or .mp3)", type=["wav", "mp3"])
+uploaded_file = st.file_uploader("Choose a .wav file", type="wav")
 
 if uploaded_file is not None:
-    audio_bytes = uploaded_file.read()
-    uploaded_file.seek(0)
-
-    # Determine audio format
-    file_extension = uploaded_file.name.split('.')[-1].lower()
-    audio_format = f'audio/{file_extension}' if file_extension in ['wav', 'mp3'] else 'audio/wav'
-
     # Load audio
-    y, sr = librosa.load(io.BytesIO(audio_bytes), sr=SAMPLE_RATE, mono=True)
-    st.audio(audio_bytes, format=audio_format)
+    y, sr = librosa.load(uploaded_file, sr=SAMPLE_RATE, mono=True)
+    st.audio(uploaded_file, format='audio/wav')
 
     # Extract features
     with st.spinner("Extracting features..."):
         feat_dict = extract_features(y, sr)
-        feat_dict['duration'] = float(len(y) / sr)
+        X = np.array(list(feat_dict.values())).reshape(1, -1)
 
-        if model is not None and hasattr(model.steps[0][1], 'feature_names_in_'):
-            feature_names = list(model.steps[0][1].feature_names_in_)
-        else:
-            feature_names = list(feat_dict.keys())
+    st.write("Features extracted successfully!")
 
-        X = np.array([feat_dict.get(name, 0.0) for name in feature_names]).reshape(1, -1)
-
-    st.success("Features extracted successfully!")
-
-    if model is not None:
-        with st.spinner("Predicting language..."):
-            try:
-                prediction = model.predict(X)[0]
-                language = CLASS_NAMES.get(int(prediction), f"Class {prediction}")
-                st.subheader("Prediction")
-                st.write(f"**The audio contains the language:** {language}")
-
-                if hasattr(model, "predict_proba"):
-                    probs = model.predict_proba(X)[0]
-                    prob_df = pd.DataFrame({
-                        CLASS_NAMES.get(i, str(i)): [float(probs[i])] for i in range(len(probs))
-                    })
-                    prob_df = prob_df.T.rename(columns={0: "Probability"}).sort_values("Probability", ascending=False)
-                    st.subheader("Prediction probabilities")
-                    st.table(prob_df)
-            except Exception as e:
-                st.error(f"Prediction failed: {e}")
-    else:
-        st.warning("Model file not found. The app can only show extracted features.")
-
+    # Display extracted features
     st.subheader("Extracted Features")
-    st.table(pd.DataFrame([feat_dict]))
+    st.json(feat_dict)
 
 st.write("Note: This app extracts acoustic features from uploaded audio files.")
