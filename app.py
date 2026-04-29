@@ -211,8 +211,8 @@ if uploaded_file is not None:
             try:
                 prediction = model.predict(X)[0]
                 language = CLASS_NAMES.get(int(prediction), f"Class {prediction}")
-                st.subheader("Prediction")
-                st.write(f"**Detected language in uploaded audio file:** {language}")
+                st.success(f"The detected language is: {language}")
+                st.subheader("Prediction Details")
 
                 if hasattr(model, "predict_proba"):
                     probs = model.predict_proba(X)[0]
