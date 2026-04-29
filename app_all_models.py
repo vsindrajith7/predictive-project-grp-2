@@ -10,6 +10,8 @@ import os
 import io
 import joblib
 import warnings
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 warnings.filterwarnings('ignore')
 
 # ─────────────────────────────────────────────
@@ -32,18 +34,26 @@ MODEL_PATHS = {
 }
 
 # ─────────────────────────────────────────────
-# FIX 1: Load scaler alongside models
-# SVM & LR REQUIRE the same StandardScaler used at training time.
-# Save your scaler as scaler.pkl from your training script:
-#   from sklearn.preprocessing import StandardScaler
-#   scaler = StandardScaler()
-#   X_train_scaled = scaler.fit_transform(X_train)
-#   joblib.dump(scaler, "scaler.pkl")
+# FIX 1: Load scaler alongside models only when needed.
+# The saved SVM/LR models are pipelines with an internal scaler step.
+# External scaler.pkl is only required if a loaded model does not
+# already contain a StandardScaler inside its pipeline.
 # ─────────────────────────────────────────────
 SCALER_PATH = "scaler.pkl"
 
 # Models that require feature scaling
 NEEDS_SCALING = {"SVM", "Logistic Regression"}
+
+
+def model_has_internal_scaler(model):
+    if isinstance(model, Pipeline):
+        return any(isinstance(step, StandardScaler) for _, step in model.steps)
+    return False
+
+
+def model_needs_external_scaling(model_name, model):
+    return model_name in NEEDS_SCALING and model is not None and not model_has_internal_scaler(model)
+
 
 @st.cache_resource
 def load_artifacts():
@@ -60,17 +70,24 @@ def load_artifacts():
             loaded_models[name] = None
 
     scaler = None
-    if os.path.exists(SCALER_PATH):
-        try:
-            scaler = joblib.load(SCALER_PATH)
-        except Exception as e:
-            st.sidebar.warning(f"⚠️ Could not load scaler: {e}")
+    if any(model_needs_external_scaling(name, model) for name, model in loaded_models.items()):
+        if os.path.exists(SCALER_PATH):
+            try:
+                scaler = joblib.load(SCALER_PATH)
+            except Exception as e:
+                st.sidebar.warning(f"⚠️ Could not load scaler: {e}")
+        else:
+            st.sidebar.warning(
+                "⚠️ **scaler.pkl not found.**\n\n"
+                "A loaded model requires external scaling, but scaler.pkl is missing. "
+                "Export your training scaler with `joblib.dump(scaler, 'scaler.pkl')`."
+            )
     else:
-        st.sidebar.warning(
-            "⚠️ **scaler.pkl not found.**\n\n"
-            "SVM and Logistic Regression predictions will be unreliable without it. "
-            "Export your training scaler with `joblib.dump(scaler, 'scaler.pkl')`."
-        )
+        if os.path.exists(SCALER_PATH):
+            try:
+                scaler = joblib.load(SCALER_PATH)
+            except Exception as e:
+                st.sidebar.warning(f"⚠️ Could not load scaler: {e}")
 
     return loaded_models, scaler
 
@@ -235,12 +252,12 @@ def extract_features(y, sr):
 
 def predict(model_name, model, scaler, X_raw):
     """
-    FIX 4: Apply scaler only for models that need it.
+    Apply external scaler only when the loaded model does not already include internal scaling.
     Returns (predicted_label, proba_dict_or_None).
     """
     X = X_raw.reshape(1, -1)
 
-    if model_name in NEEDS_SCALING:
+    if model_needs_external_scaling(model_name, model):
         if scaler is not None:
             X = scaler.transform(X)
         else:
@@ -444,14 +461,18 @@ h1, h2, h3 { font-family: 'Syne', sans-serif; font-weight: 800; }
 # ── Load artifacts ──
 models, scaler = load_artifacts()
 available_models = [n for n, m in models.items() if m is not None]
+scaler_required_by_loaded_models = any(
+    model_needs_external_scaling(name, model)
+    for name, model in models.items()
+)
 
 # ── Sidebar ──
 with st.sidebar:
     st.markdown("### 🎛️ Models")
     MODEL_ACCURACY = {
-        "Random Forest": ("89.0%", "Ensemble, no scaling needed"),
-        "SVM": ("96.2%", "Requires scaler.pkl"),
-        "Logistic Regression": ("87.3%", "Requires scaler.pkl"),
+        "Random Forest": ("89.0%", "Pipeline + optional scaler"),
+        "SVM": ("96.2%", "Pipeline includes scaler"),
+        "Logistic Regression": ("87.3%", "Pipeline includes scaler"),
     }
     for name, (acc, note) in MODEL_ACCURACY.items():
         status = "✅" if models.get(name) else "❌"
@@ -459,9 +480,16 @@ with st.sidebar:
         st.markdown(f"<span class='badge'>{acc}</span><span style='font-size:0.72rem;color:#6b7280'>{note}</span>", unsafe_allow_html=True)
         st.markdown("---")
 
-    scaler_status = "✅ Loaded" if scaler else "❌ Missing — add scaler.pkl"
+    if scaler:
+        scaler_status = "✅ Loaded"
+    elif scaler_required_by_loaded_models:
+        scaler_status = "❌ Missing — add scaler.pkl"
+    else:
+        scaler_status = "ℹ️ Not required for loaded models"
+
     st.markdown(f"**Scaler:** {scaler_status}")
-    if not scaler:
+
+    if not scaler and scaler_required_by_loaded_models:
         st.markdown("""
         <div class='warn-box'>
         Add <b>scaler.pkl</b> from your training script:<br><br>
@@ -537,16 +565,17 @@ if uploaded_file and y is not None:
             acc_label = MODEL_ACCURACY[selected_model_name][0]
             st.metric("Reported Accuracy", acc_label)
 
-        if scaler is None and selected_model_name in NEEDS_SCALING:
+        selected_model = models[selected_model_name]
+        if scaler is None and model_needs_external_scaling(selected_model_name, selected_model):
             st.markdown("""
             <div class='warn-box'>
-            ⚠️ <b>scaler.pkl not found.</b> This model requires feature scaling.
+            ⚠️ <b>scaler.pkl not found.</b> This model requires external feature scaling.
             Prediction will likely be wrong. Export your training scaler and place it here.
             </div>
             """, unsafe_allow_html=True)
 
         if st.button("▶ Detect Language"):
-            model = models[selected_model_name]
+            model = selected_model
             with st.spinner("Running inference…"):
                 try:
                     language, proba = predict(selected_model_name, model, scaler, X_raw)
