@@ -371,7 +371,7 @@ col1, col2, col3 = st.columns([1, 2, 1])
 
 with col2:
     st.markdown('<h1 class="title">🎯 AI Language Detector</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="subtitle">Advanced Machine Learning for South Indian Language Recognition</p>', unsafe_allow_html=True)
+    st.markdown('<p class="subtitle">Advanced Machine Learning for Indian Language Recognition</p>', unsafe_allow_html=True)
 
 # Upload section
 st.markdown('<div class="card">', unsafe_allow_html=True)
