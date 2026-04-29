@@ -185,8 +185,8 @@ def extract_features(y, sr):
     return features
 
 # Streamlit app
-st.title("Language Classification App")
-st.write("Upload a .wav audio file and this app will predict the language spoken in that audio.")
+st.title("Language Detection from Audio")
+st.write("Upload a .wav audio file to detect the language spoken.")
 
 uploaded_file = st.file_uploader("Choose a .wav file", type="wav")
 
@@ -196,38 +196,18 @@ if uploaded_file is not None:
 
     # Load audio
     y, sr = librosa.load(io.BytesIO(audio_bytes), sr=SAMPLE_RATE, mono=True)
-    st.audio(audio_bytes, format='audio/wav')
-    st.write(f"**Uploaded file:** {uploaded_file.name}")
 
     # Extract features
-    with st.spinner("Extracting features..."):
+    with st.spinner("Analyzing audio..."):
         feat_dict = extract_features(y, sr)
         X = np.array(list(feat_dict.values())).reshape(1, -1)
 
-    st.success("Features extracted successfully!")
-
     if model is not None:
-        with st.spinner("Predicting language..."):
-            try:
-                prediction = model.predict(X)[0]
-                language = CLASS_NAMES.get(int(prediction), f"Class {prediction}")
-                st.success(f"The detected language is: {language}")
-                st.subheader("Prediction Details")
-
-                if hasattr(model, "predict_proba"):
-                    probs = model.predict_proba(X)[0]
-                    prob_df = pd.DataFrame({
-                        CLASS_NAMES.get(i, str(i)): [float(probs[i])] for i in range(len(probs))
-                    })
-                    prob_df = prob_df.T.rename(columns={0: "Probability"}).sort_values("Probability", ascending=False)
-                    st.subheader("Prediction probabilities")
-                    st.table(prob_df)
-            except Exception as e:
-                st.error(f"Prediction failed: {e}")
+        try:
+            prediction = model.predict(X)[0]
+            language = CLASS_NAMES.get(int(prediction), f"Class {prediction}")
+            st.success(f"**Detected Language: {language}**")
+        except Exception as e:
+            st.error(f"Prediction failed: {e}")
     else:
-        st.warning("Model file not found. The app can only show extracted features.")
-
-    st.subheader("Extracted Features")
-    st.table(pd.DataFrame([feat_dict]))
-
-st.write("Note: This app extracts acoustic features from uploaded audio files.")
+        st.warning("Model file not found.")
