@@ -189,7 +189,30 @@ def extract_features(y, sr):
     features.update(extract_phonotactic(y, sr))
     features.update(extract_pitch(y, sr))
     features.update(extract_formants(y, sr))
-    return features
+
+    # Add duration feature
+    features['duration'] = len(y) / sr
+
+    # Select only the 61 features that the models were trained on
+    selected_features = [
+        'duration', 'spectral_bandwidth_mean', 'F3_mean', 'spectral_centroid_mean',
+        'spectral_centroid_std', 'spectral_rolloff_std', 'mfcc_2_mean', 'F2_mean',
+        'mfcc_d2_1_std', 'spectral_bandwidth_std', 'mfcc_d_1_std', 'zcr_std',
+        'mfcc_d2_5_std', 'zcr_mean', 'mfcc_d2_7_std', 'F1_std', 'mfcc_d2_2_std',
+        'mfcc_1_std', 'mfcc_d2_3_std', 'mfcc_d_5_std', 'mfcc_3_mean', 'mfcc_d_7_std',
+        'mfcc_d_11_std', 'mfcc_d2_8_std', 'mfcc_d2_11_std', 'mfcc_d2_9_std',
+        'mfcc_d_8_std', 'mfcc_d_9_std', 'mfcc_d_2_std', 'mfcc_d2_13_std',
+        'mfcc_d_13_std', 'mfcc_7_mean', 'F2_std', 'mfcc_6_mean', 'pitch_mean',
+        'mfcc_11_mean', 'mfcc_2_std', 'mfcc_d_12_std', 'mfcc_d2_12_std', 'mfcc_9_std',
+        'mfcc_7_std', 'energy_max', 'mfcc_d2_10_std', 'mfcc_5_std', 'energy_std',
+        'mfcc_11_std', 'mfcc_10_mean', 'mfcc_d_10_std', 'mfcc_13_std', 'mfcc_12_std',
+        'mfcc_9_mean', 'mfcc_d_3_std', 'mfcc_8_std', 'mfcc_d2_6_std', 'mfcc_13_mean',
+        'F1_mean', 'energy_mean', 'vowel_ratio', 'mfcc_5_mean', 'mfcc_d2_4_std', 'F3_std'
+    ]
+
+    # Extract only the selected features in the correct order
+    X = np.array([features[feat] for feat in selected_features])
+    return X
 
 # Streamlit app
 st.title("Multi-Model Language Detection")
@@ -206,8 +229,7 @@ if uploaded_file is not None:
 
     # Extract features
     with st.spinner("Extracting features..."):
-        feat_dict = extract_features(y, sr)
-        X = np.array(list(feat_dict.values())).reshape(1, -1)
+        X = extract_features(y, sr).reshape(1, -1)
 
     st.success("Features extracted successfully!")
 
