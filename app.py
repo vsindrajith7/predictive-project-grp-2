@@ -186,7 +186,7 @@ def extract_features(y, sr):
 
 # Streamlit app
 st.title("Language Classification App")
-st.write("Upload a .wav audio file to predict the language using trained ML models.")
+st.write("Upload a .wav audio file and this app will predict the language spoken in that audio.")
 
 uploaded_file = st.file_uploader("Choose a .wav file", type="wav")
 
@@ -197,6 +197,7 @@ if uploaded_file is not None:
     # Load audio
     y, sr = librosa.load(io.BytesIO(audio_bytes), sr=SAMPLE_RATE, mono=True)
     st.audio(audio_bytes, format='audio/wav')
+    st.write(f"**Uploaded file:** {uploaded_file.name}")
 
     # Extract features
     with st.spinner("Extracting features..."):
@@ -211,7 +212,7 @@ if uploaded_file is not None:
                 prediction = model.predict(X)[0]
                 language = CLASS_NAMES.get(int(prediction), f"Class {prediction}")
                 st.subheader("Prediction")
-                st.write(f"**Predicted language:** {language}")
+                st.write(f"**Detected language in uploaded audio file:** {language}")
 
                 if hasattr(model, "predict_proba"):
                     probs = model.predict_proba(X)[0]
