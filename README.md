@@ -1,4 +1,4 @@
-
+Streamlit app link: https://predictive-project-grp-2-4qim8cuvksfzxdc7hsmj9h.streamlit.app/
 ### DESCRIPTION OF MEMBER1- TASK (DATASET COLLECTION, EDA&PREPROCESSING, FEATURE_ENGINEERING)
 ## DATASET COLLECTION (dataset.py)
 ## OBJECTIVE
